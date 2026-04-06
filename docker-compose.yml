@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: smart_campus_db
+    environment:
+      POSTGRES_USER: campus_user
+      POSTGRES_PASSWORD: campus_password
+      POSTGRES_DB: smart_campus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: smart_campus_backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8080:8000"
+    environment:
+      - DATABASE_URL=postgresql://campus_user:campus_password@db:5432/smart_campus
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: smart_campus_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
