@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { GraduationCap, Users, Leaf, Calendar, Clock, MapPin, AlertTriangle, Droplets, Zap, Wrench, Thermometer, Wind, Sun } from 'lucide-react';
 
