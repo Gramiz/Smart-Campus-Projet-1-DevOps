@@ -7,6 +7,99 @@ import filleImage from './assets/fille.png';
 import buImage from './assets/bu.png';
 import meteoImage from './assets/meteo.png';
 
+// --- COMPOSANT PAGE D'INSCRIPTION (NOUVEAU) ---
+function SignupPage() {
+  return (
+    <div
+      className="h-screen overflow-hidden bg-cover bg-center flex items-center justify-center p-4"
+      style={{ backgroundImage: `url(${homeImage})` }}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+      <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center -mt-[15px]">
+
+        {/* Formulaire (Côté Gauche) */}
+        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 shadow-2xl scale-80 origin-center">
+          <h2 className="text-5xl font-serif text-white mb-2">Join Us !</h2>
+          <p className="text-gray-300 text-base mb-8 font-light">
+            Create an account to access our intelligent campus.
+          </p>
+
+          <form className="space-y-5">
+            {/* Prénom et Nom côte à côte pour gagner de la place */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">First Name</label>
+                <input
+                  type="text"
+                  placeholder="John"
+                  className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Last Name</label>
+                <input
+                  type="text"
+                  placeholder="Doe"
+                  className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Email</label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Password</label>
+              <input
+                type="password"
+                placeholder="********"
+                className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
+              />
+            </div>
+
+            <button className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg mt-2">
+              Sign Up
+            </button>
+
+            <div className="relative flex items-center justify-center">
+              <div className="w-full h-px bg-white/10"></div>
+              <span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Or</span>
+            </div>
+
+            <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />
+              Sign up with google
+            </button>
+
+            <p className="text-center text-sm text-gray-400 pt-2">
+              Already have an account?{' '}
+              <Link to="/login">
+                <span className="text-white font-bold cursor-pointer hover:underline">Log In</span>
+              </Link>
+            </p>
+          </form>
+        </div>
+
+        {/* Logo & Texte (Côté Droit) */}
+        <div className="hidden md:flex flex-col items-center justify-center text-center">
+          <img src={logoImage} alt="Logo" className="w-28 h-28 mb-4" />
+          <h1 className="text-5xl font-serif text-white tracking-wider mb-2">Smart Campus</h1>
+          <p className="text-sm tracking-[0.3em] uppercase text-gray-200 font-light italic">
+            The Character of success
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- COMPOSANT PAGE DE CONNEXION ---
 function LoginPage() {
   return (
@@ -21,14 +114,12 @@ function LoginPage() {
         {/* Formulaire (Côté Gauche) */}
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 shadow-2xl scale-80 origin-center">
           <h2 className="text-5xl font-serif text-white mb-2">Welcome !</h2>
-          {/* Taille augmentée de text-sm à text-base */}
           <p className="text-gray-300 text-base mb-10 font-light">
             Sign In to access our intelligent campus, and reserve your desk !
           </p>
 
           <form className="space-y-8">
             <div className="flex flex-col gap-3">
-              {/* Le même style que la Home Page (uppercase tracking), mais plus grand (text-sm) */}
               <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Email</label>
               <input
                 type="email"
@@ -38,7 +129,6 @@ function LoginPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              {/* Le même style que la Home Page (uppercase tracking), mais plus grand (text-sm) */}
               <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Password</label>
               <input
                 type="password"
@@ -47,7 +137,6 @@ function LoginPage() {
               />
             </div>
 
-            {/* Taille augmentée à text-sm */}
             <div className="flex justify-between items-center px-1 text-sm">
               <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
                 <input type="checkbox" className="rounded border-white/10 bg-white/5" />
@@ -62,7 +151,6 @@ function LoginPage() {
 
             <div className="relative flex items-center justify-center">
               <div className="w-full h-px bg-white/10"></div>
-              {/* Or légèrement grossi en text-base */}
               <span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Or</span>
             </div>
 
@@ -72,7 +160,11 @@ function LoginPage() {
             </button>
 
             <p className="text-center text-sm text-gray-400 pt-4">
-              Don't have an account? <span className="text-white font-bold cursor-pointer">Sign Up</span>
+              Don't have an account?{' '}
+              {/* Le lien vers Sign Up */}
+              <Link to="/signup">
+                <span className="text-white font-bold cursor-pointer hover:underline">Sign Up</span>
+              </Link>
             </p>
           </form>
         </div>
@@ -94,7 +186,6 @@ function LoginPage() {
 function LandingPage() {
   return (
     <>
-      {/* SECTION 1 : HERO */}
       <section
         className="relative min-h-screen flex flex-col bg-cover bg-center"
         style={{ backgroundImage: `url(${homeImage})` }}
@@ -109,7 +200,8 @@ function LandingPage() {
           <div className="flex items-center gap-12 text-sm font-medium tracking-wide">
             <a href="#" className="hover:text-gray-300 transition">Home</a>
             <a href="#" className="hover:text-gray-300 transition">About Us</a>
-            <a href="#" className="hover:text-gray-400 transition">Sign Up</a>
+            {/* Le lien vers Sign Up sur la page d'accueil */}
+            <Link to="/signup" className="hover:text-gray-400 transition">Sign Up</Link>
             <Link to="/login">
               <button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">
                 Sign In
@@ -144,7 +236,7 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 2 : PRÉSENTATION */}
+      {/* Reste de tes sections (Présentation, Reservation, Signalement, Météo...) */}
       <section className="relative w-full flex flex-col md:flex-row bg-black min-h-[400px] z-20">
         <div className="w-full md:w-1/2 p-12 md:pl-24 flex flex-col justify-center text-white">
           <h2 className="text-6xl font-serif mb-6">Smart Campus</h2>
@@ -218,6 +310,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        {/* NOUVELLE ROUTE POUR L'INSCRIPTION */}
+        <Route path="/signup" element={<SignupPage />} />
       </Routes>
     </div>
   );
