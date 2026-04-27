@@ -1,17 +1,22 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:15
+    image: mariadb:11
     container_name: smart_campus_db
     environment:
-      POSTGRES_USER: campus_user
-      POSTGRES_PASSWORD: campus_password
-      POSTGRES_DB: smart_campus
+      MARIADB_ROOT_PASSWORD: root_password
+      MARIADB_DATABASE: campus_smart_manager
+      MARIADB_USER: campus_user
+      MARIADB_PASSWORD: campus_password
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mariadb_data:/var/lib/mysql
+      - ./backend/bd:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   backend:
@@ -22,9 +27,13 @@ services:
     ports:
       - "8080:8000"
     environment:
-      - DATABASE_URL=postgresql://campus_user:campus_password@db:5432/smart_campus
+      - DATABASE_URL=mysql+pymysql://campus_user:campus_password@db:3306/campus_smart_manager
+      - SECRET_KEY=change-me-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - CORS_ORIGINS=http://localhost:5173
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -42,4 +51,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  mariadb_data:
