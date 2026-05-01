@@ -12,7 +12,9 @@ import filleImage from './assets/fille.png';
 import buImage from './assets/bu-bg.png';
 import meteoImage from './assets/meteo.png';
 
-// --- PAGE 1 : CHOIX DE L'HORAIRE ---
+// ============================================================================
+// PAGE 1 : CHOIX DE L'HORAIRE DE RESERVATION
+// ============================================================================
 function ReservationPage() {
   const [selectedTime, setSelectedTime] = useState(null);
 
@@ -63,8 +65,8 @@ function ReservationPage() {
                 key={index}
                 onClick={() => setSelectedTime(time)}
                 className={`text-2xl font-light py-2 rounded-xl transition-all duration-300 ${selectedTime === time
-                    ? "bg-white text-black font-medium scale-110 shadow-lg"
-                    : "text-white/80 hover:text-white hover:bg-white/10"
+                  ? "bg-white text-black font-medium scale-110 shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
               >
                 {time}
@@ -72,7 +74,6 @@ function ReservationPage() {
             ))}
           </div>
 
-          {/* Lien vers la nouvelle page détaillée avec passage de l'heure sélectionnée */}
           <Link to="/room-info" state={{ time: selectedTime }}>
             <button className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-8 py-3 rounded-full text-sm uppercase tracking-widest font-semibold hover:bg-white hover:text-black transition-all duration-300">
               view informations about the room
@@ -84,9 +85,10 @@ function ReservationPage() {
   );
 }
 
-// --- PAGE 2 : INFOS DÉTAILLÉES DE LA SALLE (NOUVELLE PAGE) ---
+// ============================================================================
+// PAGE 2 : INFORMATIONS DÉTAILLÉES DE LA SALLE
+// ============================================================================
 function RoomInfoPage() {
-  // On récupère l'heure sélectionnée sur la page précédente
   const location = useLocation();
   const selectedTime = location.state?.time || "your selected time";
 
@@ -181,7 +183,9 @@ function RoomInfoPage() {
   );
 }
 
-// --- PAGE D'INSCRIPTION ---
+// ============================================================================
+// PAGE 3 : INSCRIPTION
+// ============================================================================
 function SignupPage() {
   return (
     <div className="h-screen overflow-hidden bg-cover bg-center flex items-center justify-center p-4" style={{ backgroundImage: `url(${homeImage})` }}>
@@ -225,7 +229,9 @@ function SignupPage() {
   );
 }
 
-// --- PAGE DE CONNEXION ---
+// ============================================================================
+// PAGE 4 : CONNEXION
+// ============================================================================
 function LoginPage() {
   return (
     <div className="h-screen overflow-hidden bg-cover bg-center flex items-center justify-center p-4" style={{ backgroundImage: `url(${homeImage})` }}>
@@ -260,7 +266,132 @@ function LoginPage() {
   );
 }
 
-// --- PAGE D'ACCUEIL ---
+// ============================================================================
+// PAGE 5 : SIGNALEMENT (REPORT) - Version optimisée responsive
+// ============================================================================
+function ReportPage() {
+  const [category, setCategory] = useState(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleReport = (e) => {
+    e.preventDefault();
+    if (!category) {
+      alert("Please select a category first !");
+      return;
+    }
+    // Simulation d'un envoi réussi
+    setIsSubmitted(true);
+  };
+
+  return (
+    <div
+      // Modification ici : min-h-screen et overflow-y-auto pour permettre le scroll si besoin
+      className="min-h-screen overflow-y-auto bg-cover bg-center flex flex-col relative"
+      style={{ backgroundImage: `url(${buImage})` }}
+    >
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-md"></div>
+
+      <nav className="relative z-10 flex justify-between items-center py-8 px-12 w-full">
+        <div className="w-12 h-12">
+          <Link to="/">
+            <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
+          </Link>
+        </div>
+      </nav>
+
+      {/* Modification ici : -mt-24 au lieu de -mt-10 pour remonter le bloc, et pb-10 pour l'espace en bas */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-24 px-6 pb-10">
+
+        {/* Modification ici : p-8 au lieu de p-12, et gap-10 au lieu de gap-16 pour tasser légèrement */}
+        <div className="w-full max-w-6xl bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 shadow-2xl flex flex-col md:flex-row gap-10">
+
+          <div className="flex-1 flex flex-col justify-center">
+            <Link to="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition w-fit mb-6 uppercase tracking-widest text-xs">
+              <ArrowLeft size={16} /> Back to Home
+            </Link>
+
+            <h2 className="text-5xl font-serif text-white mb-2 flex items-center gap-4">
+              <AlertTriangle size={40} className="text-white/80" />
+              Report Issue
+            </h2>
+            <p className="text-gray-300 font-light mb-8 leading-relaxed">
+              Help us maintain a perfect environment. Select the type of issue, specify the location, and our maintenance team will be notified in real-time.
+            </p>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 w-fit">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-2">Live Response Time</h4>
+              <div className="flex items-center gap-3 text-gray-400">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-sm">Team is currently active (~15 min ETA)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col justify-center">
+            {isSubmitted ? (
+              <div className="text-center bg-green-500/10 border border-green-500/20 rounded-3xl p-10 flex flex-col items-center">
+                <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mb-4">
+                  <AlertTriangle size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Report Submitted!</h3>
+                <p className="text-gray-400 mb-6">Thank you for keeping our campus smart and safe.</p>
+                <button
+                  onClick={() => setIsSubmitted(false)}
+                  className="px-6 py-3 bg-white text-black font-bold uppercase text-xs tracking-widest rounded-xl hover:bg-gray-200 transition"
+                >
+                  Submit another issue
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleReport} className="flex flex-col gap-6">
+
+                <div className="grid grid-cols-2 gap-4 mb-2">
+                  <button type="button" onClick={() => setCategory('water')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'water' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
+                    <Droplets size={28} />
+                    <span className="text-xs uppercase tracking-widest font-semibold">Water</span>
+                  </button>
+                  <button type="button" onClick={() => setCategory('electricity')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'electricity' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
+                    <Zap size={28} />
+                    <span className="text-xs uppercase tracking-widest font-semibold">Power</span>
+                  </button>
+                  <button type="button" onClick={() => setCategory('damage')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'damage' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
+                    <Wrench size={28} />
+                    <span className="text-xs uppercase tracking-widest font-semibold">Damage</span>
+                  </button>
+                  <button type="button" onClick={() => setCategory('other')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'other' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
+                    <AlertTriangle size={28} />
+                    <span className="text-xs uppercase tracking-widest font-semibold">Other</span>
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Exact Location (e.g., Room A-204)"
+                  required
+                  className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
+                />
+                <textarea
+                  rows="3"
+                  placeholder="Describe the issue briefly..."
+                  required
+                  className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition resize-none"
+                ></textarea>
+
+                <button type="submit" className="w-full py-5 bg-white text-black font-bold uppercase text-sm tracking-[0.2em] rounded-2xl hover:bg-gray-200 transition-all active:scale-95 shadow-xl mt-2">
+                  Send Alert
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// PAGE 6 : ACCUEIL PRINCIPALE
+// ============================================================================
 function LandingPage() {
   return (
     <>
@@ -322,7 +453,6 @@ function LandingPage() {
             <div className="flex flex-col gap-4"><div className="flex items-center gap-3"><MapPin size={20} className="text-white" /><label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Room Type</label></div><select className="bg-transparent border-b border-white/40 py-2 text-white outline-none appearance-none"><option className="bg-black">Study Room</option></select></div>
           </div>
           <div className="flex justify-center">
-            {/* Le lien pointe maintenant directement vers la grille d'horaires */}
             <Link to="/reservation">
               <button className="px-12 py-4 bg-transparent border border-white text-white text-sm uppercase tracking-widest font-semibold hover:bg-white hover:text-black transition-all">Check Availability</button>
             </Link>
@@ -341,9 +471,11 @@ function LandingPage() {
               <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><AlertTriangle size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Other</span></button>
             </div>
             <div className="flex flex-col gap-8">
-              <input type="text" placeholder="Location" className="bg-transparent border-b border-white/20 py-3 outline-none text-white" />
-              <textarea rows="3" placeholder="Description" className="bg-transparent border-b border-white/20 py-3 outline-none resize-none text-white"></textarea>
-              <button className="w-full py-4 bg-white text-black font-bold uppercase text-xs tracking-widest">Submit Report</button>
+              <Link to="/report" className="w-full">
+                <button className="w-full py-4 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-gray-200 transition">
+                  Open Reporting Tool
+                </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -368,7 +500,9 @@ function LandingPage() {
   );
 }
 
-// --- ROUTER PRINCIPAL ---
+// ============================================================================
+// ROUTEUR PRINCIPAL
+// ============================================================================
 export default function App() {
   return (
     <div className="min-h-screen font-sans bg-gray-900 text-white flex flex-col">
@@ -376,10 +510,9 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        {/* Route vers la grille des horaires */}
         <Route path="/reservation" element={<ReservationPage />} />
-        {/* Nouvelle route vers les infos détaillées de la salle */}
         <Route path="/room-info" element={<RoomInfoPage />} />
+        <Route path="/report" element={<ReportPage />} />
       </Routes>
     </div>
   );
