@@ -110,6 +110,20 @@ services:
     command: -config.file=/etc/promtail/config.yml
     restart: unless-stopped
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: smart_campus_phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    ports:
+      - "8082:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   mariadb_data:
   prometheus_data:

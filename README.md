@@ -57,6 +57,7 @@ Une fois lancé, vous pouvez accéder aux différents services via les adresses 
 | **Grafana** | [http://localhost:3000](http://localhost:3000) | Dashboards de monitoring |
 | **Prometheus** | [http://localhost:9090](http://localhost:9090) | Base de données de métriques |
 | **cAdvisor** | [http://localhost:8081](http://localhost:8081) | Métriques des conteneurs en temps réel (CPU, RAM) |
+| **phpMyAdmin** | [http://localhost:8082](http://localhost:8082) | Interface admin vers la base MariaDB |
 
 ## 📊 SRE & Observabilité
 
