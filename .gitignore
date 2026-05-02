@@ -1,13 +1,19 @@
 .DS_Store
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
 .venv/
 .venv-ci/
+.claude/
+.vscode/
 
 # Node
 node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+
+# Environment variables
+.env
+
