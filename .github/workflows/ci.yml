@@ -10,6 +10,9 @@ on:
       - dev
       - main
 
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: Frontend CI
@@ -60,7 +63,34 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Validate Python syntax
-        run: python -m compileall .
+        run: python -m compileall main.py
 
       - name: Validate FastAPI app import
         run: python -c "import main; print(main.app.title)"
+
+      - name: Test API endpoints
+        run: |
+          uvicorn main:app --host 127.0.0.1 --port 8000 &
+          curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:8000/
+          curl --fail http://127.0.0.1:8000/health
+          curl --fail http://127.0.0.1:8000/openapi.json
+
+  docker:
+    name: Docker build checks
+    runs-on: ubuntu-latest
+    needs:
+      - frontend
+      - backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t smart-campus-backend:ci ./backend
+
+      - name: Build frontend image
+        run: docker build -t smart-campus-frontend:ci ./frontend
+
+      - name: Validate Docker Compose config
+        run: docker compose config
