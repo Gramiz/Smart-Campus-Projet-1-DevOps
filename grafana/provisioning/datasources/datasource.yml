@@ -13,3 +13,18 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: true
+
+  - name: SmartCampusDB
+    uid: smartcampus_mysql
+    type: mysql
+    access: proxy
+    url: db:3306
+    database: ${MARIADB_DATABASE}
+    user: ${MARIADB_USER}
+    secureJsonData:
+      password: ${MARIADB_PASSWORD}
+    jsonData:
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+    editable: true
