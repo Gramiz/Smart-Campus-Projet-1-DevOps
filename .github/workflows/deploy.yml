@@ -1,0 +1,90 @@
+name: CD AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: smart-campus-backend
+  FRONTEND_IMAGE: smart-campus-frontend
+
+jobs:
+  test:
+    name: Test before deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose production config
+        run: |
+          IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER docker compose -f docker-compose.prod.yml config
+
+  build:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare image owner
+        run: echo "IMAGE_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Build backend image
+        run: docker build -t ${{ env.BACKEND_IMAGE }} ./backend
+
+      - name: Build frontend image
+        run: docker build -t ${{ env.FRONTEND_IMAGE }} ./frontend
+
+      - name: Tag backend latest
+        run: docker tag ${{ env.BACKEND_IMAGE }} ${{ env.REGISTRY }}/$IMAGE_OWNER/${{ env.BACKEND_IMAGE }}:latest
+
+      - name: Tag frontend latest
+        run: docker tag ${{ env.FRONTEND_IMAGE }} ${{ env.REGISTRY }}/$IMAGE_OWNER/${{ env.FRONTEND_IMAGE }}:latest
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.TOKENCICD }}
+
+      - name: Push backend image
+        run: docker push ${{ env.REGISTRY }}/$IMAGE_OWNER/${{ env.BACKEND_IMAGE }}:latest
+
+      - name: Push frontend image
+        run: docker push ${{ env.REGISTRY }}/$IMAGE_OWNER/${{ env.FRONTEND_IMAGE }}:latest
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Connect to EC2 and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.KEY }}
+          script: |
+            set -e
+            cd ~/Smart-Campus-Projet-1-DevOps
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+
+            IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            echo "${{ secrets.TOKENCICD }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER docker compose -f docker-compose.prod.yml pull
+            REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER VITE_API_BASE_URL=http://${{ secrets.HOST }}:8080 CORS_ORIGINS=http://${{ secrets.HOST }}:5173 docker compose -f docker-compose.prod.yml up -d
+
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:5173
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8080/
