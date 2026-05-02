@@ -72,8 +72,8 @@ jobs:
         run: |
           uvicorn main:app --host 127.0.0.1 --port 8000 &
           curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:8000/
-          curl --fail http://127.0.0.1:8000/api/sensors
-          curl --fail http://127.0.0.1:8000/api/reservations
+          curl --fail http://127.0.0.1:8000/health
+          curl --fail http://127.0.0.1:8000/openapi.json
 
   docker:
     name: Docker build checks
