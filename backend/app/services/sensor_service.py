@@ -1,10 +1,17 @@
 from datetime import datetime
-
+from prometheus_client import Gauge
 from sqlalchemy.orm import Session
 
 from app.models.sensor import Sensor, SensorType
 from app.models.sensor_data import SensorData
 from app.schemas.sensor import SensorCreate, SensorDataIn, SensorUpdate
+
+# Define the gauge to track data freshness (delay)
+DATA_FRESHNESS_GAUGE = Gauge(
+    "sensor_data_freshness_seconds",
+    "Delay between sensor reading timestamp and ingestion time",
+    ["sensor_id"]
+)
 
 
 def list_sensors(
@@ -46,6 +53,10 @@ def delete_sensor(db: Session, sensor: Sensor) -> None:
 
 
 def add_reading(db: Session, sensor_id: int, payload: SensorDataIn) -> SensorData:
+    reading_time = payload.timestamp if payload.timestamp else datetime.now()
+    delay = (datetime.now() - reading_time).total_seconds()
+    DATA_FRESHNESS_GAUGE.labels(sensor_id=str(sensor_id)).set(delay)
+
     reading = SensorData(
         sensor_id=sensor_id,
         value=payload.value,
@@ -60,6 +71,12 @@ def add_reading(db: Session, sensor_id: int, payload: SensorDataIn) -> SensorDat
 def add_readings_bulk(
     db: Session, sensor_id: int, readings: list[SensorDataIn]
 ) -> list[SensorData]:
+    now = datetime.now()
+    for r in readings:
+        reading_time = r.timestamp if r.timestamp else now
+        delay = (now - reading_time).total_seconds()
+        DATA_FRESHNESS_GAUGE.labels(sensor_id=str(sensor_id)).set(delay)
+
     objs = [
         SensorData(
             sensor_id=sensor_id,
