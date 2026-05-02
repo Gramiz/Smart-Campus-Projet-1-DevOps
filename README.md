@@ -28,12 +28,19 @@ Avant de commencer, assurez-vous d'avoir installé :
    cd Smart-Campus-Projet-1-DevOps
    ```
 
-2. **Lancer l'ensemble des services** :
+2. **Configurer l'environnement** :
+   Copiez le fichier d'exemple et remplissez-le avec vos configurations :
+   ```bash
+   cp .env.example .env
+   ```
+   Ouvrez ensuite le fichier `.env` pour y renseigner vos variables d'environnement.
+
+3. **Lancer l'ensemble des services** :
    ```bash
    docker compose up -d
    ```
 
-3. **Vérifier l'état des conteneurs** :
+4. **Vérifier l'état des conteneurs** :
    ```bash
    docker compose ps
    ```
