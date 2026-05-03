@@ -13,18 +13,27 @@ export const authAPI = {
 
 // --- Réservations (Salles) ---
 export const bookingsAPI = {
-  getAll: () => api.get('/bookings'),
+  getAll: (params) => api.get('/bookings', { params }),
+  getMyBookings: () => api.get('/bookings', { params: { mine: true } }),
   create: (data) => api.post('/bookings', data),
-  // Ajoutez les autres routes selon les besoins...
+  cancel: (id) => api.delete(`/bookings/${id}`),
+};
+
+// --- Salles (Rooms) ---
+export const roomsAPI = {
+  getAll: () => api.get('/rooms'),
+  getAvailable: (start, end) => api.get('/rooms/available', { params: { start, end } }),
 };
 
 // --- Signalements (Incidents) ---
 export const incidentsAPI = {
-  getAll: () => api.get('/incidents'),
+  getAll: (params) => api.get('/incidents', { params }),
+  getMyIncidents: () => api.get('/incidents', { params: { mine: true } }),
   create: (data) => api.post('/incidents', data),
 };
 
 // --- Données Capteurs (Smart Sensors) ---
 export const sensorsAPI = {
-  getLatest: (roomId) => api.get(`/sensors/latest/${roomId}`),
+  getByRoom: (roomId) => api.get(`/sensors`, { params: { room_id: roomId } }),
+  getLatestData: (sensorId) => api.get(`/sensors/${sensorId}/data`, { params: { limit: 1 } }),
 };

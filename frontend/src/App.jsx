@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { authAPI, incidentsAPI } from './api';
+import { authAPI, incidentsAPI, bookingsAPI, roomsAPI, sensorsAPI } from './api';
 import {
   GraduationCap, Users, Leaf, Calendar, Clock, MapPin,
   AlertTriangle, Droplets, Zap, Wrench, Thermometer, Wind, Sun, Building,
-  Volume2, Wifi, Monitor, ArrowLeft
+  Volume2, Wifi, Monitor, ArrowLeft, ChevronDown, LogOut, BookOpen, ClipboardList,
+  CheckCircle, Clock3
 } from 'lucide-react';
 
 import homeImage from './assets/home.png';
@@ -44,11 +45,131 @@ function useAuth() {
 }
 
 // ============================================================================
+// COMPOSANT : USER MENU (DROPDOWN)
+// ============================================================================
+function UserMenu({ user, logout }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-3 text-white font-medium bg-white/10 px-5 py-2.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md hover:bg-white/20 transition-all"
+      >
+        <span>{user.first_name} {user.last_name}</span>
+        <ChevronDown size={16} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute right-0 mt-3 w-64 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-4 border-b border-white/5 bg-white/5">
+              <p className="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">Session active</p>
+              <p className="text-sm text-white truncate">{user.email}</p>
+            </div>
+            <div className="p-2">
+              <Link
+                to="/my-bookings"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition"
+              >
+                <BookOpen size={18} />
+                Mes réservations
+              </Link>
+              <Link
+                to="/my-incidents"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition"
+              >
+                <ClipboardList size={18} />
+                Mes signalements
+              </Link>
+              <div className="h-px bg-white/5 my-2 mx-2"></div>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  logout();
+                }}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition"
+              >
+                <LogOut size={18} />
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// COMPOSANT : NAVBAR COMMUNE
+// ============================================================================
+function Navbar({ user, logout, light = false }) {
+  return (
+    <nav className="relative z-50 flex justify-between items-center py-8 px-12 w-full text-white">
+      <div className="w-12 h-12">
+        <Link to="/"><img src={logoImage} alt="Logo" className="w-full h-full object-contain" /></Link>
+      </div>
+      <div className="flex items-center gap-12 text-sm font-medium tracking-wide">
+        <Link to="/" className="hover:text-gray-300 transition">Accueil</Link>
+        <a href="#" className="hover:text-gray-300 transition">À propos</a>
+        {user ? (
+          <UserMenu user={user} logout={logout} />
+        ) : (
+          <>
+            <Link to="/signup" className="hover:text-gray-300 transition">S'inscrire</Link>
+            <Link to="/login">
+              <button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">
+                Se connecter
+              </button>
+            </Link>
+          </>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+// ============================================================================
 // PAGE 1 : CHOIX DE L'HORAIRE DE RESERVATION
 // ============================================================================
 function ReservationPage() {
   const { user, logout } = useAuth();
-  const [selectedTime, setSelectedTime] = useState(null);
+  const [selectedHeure, setSelectedHeure] = useState(null);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+
+  const handleHeureSelect = async (time) => {
+    setSelectedHeure(time);
+    setLoadingRooms(true);
+
+    const hourMatch = time.match(/(\d+)/);
+    const hour = hourMatch ? parseInt(hourMatch[1], 10) : null;
+    if (hour === null) {
+      setLoadingRooms(false);
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(hour, 0, 0, 0);
+    const startHeure = today.toISOString();
+
+    today.setHours(hour + 1, 0, 0, 0);
+    const endHeure = today.toISOString();
+
+    try {
+      const res = await roomsAPI.getAvailable(startHeure, endHeure);
+      setAvailableRooms(res.data);
+    } catch (error) {
+      console.error("Failed to fetch available rooms", error);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
 
   const times = [
     "8h00", "9h00", "10h00", "11h00", "12h00", "13h00", "14h00",
@@ -62,44 +183,14 @@ function ReservationPage() {
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
 
-      <nav className="relative z-10 flex justify-between items-center py-8 px-12 w-full">
-        <div className="w-12 h-12">
-          <Link to="/">
-            <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
-          </Link>
-        </div>
+      <Navbar user={user} logout={logout} />
 
-        <div className="flex items-center gap-12 text-sm font-medium tracking-wide text-white">
-          <Link to="/" className="hover:text-gray-300 transition">Home</Link>
-          <a href="#" className="hover:text-gray-300 transition">About Us</a>
-          {user ? (
-            <div className="flex items-center gap-6">
-              <span className="text-white font-medium bg-white/10 px-4 py-2 rounded-full border border-white/10 shadow-sm backdrop-blur-md">
-                {user.first_name} {user.last_name}
-              </span>
-              <button onClick={logout} className="text-sm font-semibold text-gray-300 hover:text-red-400 transition bg-black/20 px-4 py-2 rounded-full border border-transparent hover:border-red-500/50">
-                Logout
-              </button>
-            </div>
-          ) : (
-            <>
-              <Link to="/signup" className="hover:text-gray-400 transition">Sign Up</Link>
-              <Link to="/login">
-                <button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">
-                  Sign In
-                </button>
-              </Link>
-            </>
-          )}
-        </div>
-      </nav>
-
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-10 px-4">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center py-10 px-4">
         <h1 className="text-6xl md:text-7xl font-serif text-white mb-2 tracking-wide text-center">
-          Online reservation
+          Réservation en ligne
         </h1>
         <p className="text-xl md:text-2xl text-gray-200 mb-12 font-light tracking-wider text-center">
-          Those are the options that are available
+          Voici les créneaux disponibles
         </p>
 
         <div className="w-full max-w-5xl bg-black/50 backdrop-blur-xl rounded-[2rem] border border-white/10 shadow-2xl overflow-hidden flex flex-col items-center p-8">
@@ -108,8 +199,8 @@ function ReservationPage() {
             {times.map((time, index) => (
               <button
                 key={index}
-                onClick={() => setSelectedTime(time)}
-                className={`text-2xl font-light py-2 rounded-xl transition-all duration-300 ${selectedTime === time
+                onClick={() => handleHeureSelect(time)}
+                className={`text-2xl font-light py-2 rounded-xl transition-all duration-300 ${selectedHeure === time
                   ? "bg-white text-black font-medium scale-110 shadow-lg"
                   : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
@@ -119,11 +210,32 @@ function ReservationPage() {
             ))}
           </div>
 
-          <Link to="/room-info" state={{ time: selectedTime }}>
-            <button className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-8 py-3 rounded-full text-sm uppercase tracking-widest font-semibold hover:bg-white hover:text-black transition-all duration-300">
-              view informations about the room
-            </button>
-          </Link>
+          {selectedHeure && (
+            <div className="w-full flex flex-col items-center mt-6">
+              <h3 className="text-2xl text-white font-light mb-6">
+                Salles disponibles à {selectedHeure}
+              </h3>
+              {loadingRooms ? (
+                <div className="text-white animate-pulse">Chargement des salles...</div>
+              ) : availableRooms.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
+                  {availableRooms.map(room => (
+                    <Link key={room.id} to="/room-info" state={{ time: selectedHeure, room: room }}>
+                      <div className="bg-black/40 hover:bg-white/20 border border-white/20 rounded-2xl p-6 transition-all cursor-pointer text-left shadow-lg">
+                        <h4 className="text-xl font-bold text-white mb-2">{room.name}</h4>
+                        <div className="flex justify-between items-center text-sm text-gray-300">
+                          <span className="capitalize">{room.room_type}</span>
+                          <span>Capacité : {room.capacity}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-300 italic">Aucune salle disponible pour cet horaire.</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -135,7 +247,78 @@ function ReservationPage() {
 // ============================================================================
 function RoomInfoPage() {
   const location = useLocation();
-  const selectedTime = location.state?.time || "your selected time";
+  const navigate = useNavigate();
+  const selectedHeure = location.state?.time || "your selected time";
+  const room = location.state?.room || { id: 1, name: "Salle d'étude A-204", capacity: 6 };
+
+  const [sensorsData, setSensorsData] = useState([]);
+  const [loadingSensors, setLoadingSensors] = useState(true);
+
+  useEffect(() => {
+    const fetchSensors = async () => {
+      try {
+        setLoadingSensors(true);
+        const resSensors = await sensorsAPI.getByRoom(room.id);
+        const sensors = resSensors.data;
+
+        const enrichedSensors = await Promise.all(
+          sensors.map(async (sensor) => {
+            try {
+              const dataRes = await sensorsAPI.getLatestData(sensor.id);
+              const latestData = dataRes.data.length > 0 ? dataRes.data[0].value : null;
+              return { ...sensor, latestValue: latestData };
+            } catch (err) {
+              return { ...sensor, latestValue: null };
+            }
+          })
+        );
+        setSensorsData(enrichedSensors);
+      } catch (error) {
+        console.error("Failed to fetch sensors", error);
+      } finally {
+        setLoadingSensors(false);
+      }
+    };
+    fetchSensors();
+  }, [room.id]);
+
+  const getSensorIcon = (type) => {
+    switch (type) {
+      case 'temperature': return <Thermometer className="text-white/40 mb-4" size={28} />;
+      case 'occupancy': return <Users className="text-white/40 mb-4" size={28} />;
+      case 'energy': return <Zap className="text-white/40 mb-4" size={28} />;
+      default: return <Wind className="text-white/40 mb-4" size={28} />;
+    }
+  };
+
+  const handleBooking = async () => {
+    const hourMatch = selectedHeure.match(/(\d+)/);
+    const hour = hourMatch ? parseInt(hourMatch[1], 10) : null;
+    if (hour === null) {
+      alert("Veuillez d'abord sélectionner une heure valide.");
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(hour, 0, 0, 0);
+    const startHeure = today.toISOString();
+
+    today.setHours(hour + 1, 0, 0, 0);
+    const endHeure = today.toISOString();
+
+    try {
+      await bookingsAPI.create({
+        room_id: room.id,
+        start_time: startHeure,
+        end_time: endHeure,
+        status: "confirmed"
+      });
+      alert(`Salle réservée avec succès pour ${selectedHeure} !`);
+      navigate('/');
+    } catch (err) {
+      alert("Échec de la réservation : " + (err.response?.data?.detail || err.message));
+    }
+  };
 
   return (
     <div
@@ -144,39 +327,35 @@ function RoomInfoPage() {
     >
       <div className="absolute inset-0 bg-black/65 backdrop-blur-md"></div>
 
-      <nav className="relative z-10 flex justify-between items-center py-8 px-12 w-full">
-        <div className="w-12 h-12">
-          <Link to="/"><img src={logoImage} alt="Logo" className="w-full h-full object-contain" /></Link>
-        </div>
-      </nav>
+      <Navbar user={null} logout={null} />
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-10 px-6">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center py-10 px-6">
 
         <div className="w-full max-w-6xl bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-12 shadow-2xl flex flex-col md:flex-row gap-16">
 
           {/* Colonne Gauche : Présentation et Équipements */}
           <div className="flex-1 flex flex-col justify-center">
             <Link to="/reservation" className="flex items-center gap-2 text-gray-400 hover:text-white transition w-fit mb-6 uppercase tracking-widest text-xs">
-              <ArrowLeft size={16} /> Back to schedule
+              <ArrowLeft size={16} /> Retour aux horaires
             </Link>
 
-            <h2 className="text-5xl font-serif text-white mb-2">Study Room A-204</h2>
+            <h2 className="text-5xl font-serif text-white mb-2">{room.name}</h2>
             <p className="text-gray-300 font-light mb-8">
-              Booking for : <span className="font-bold text-white bg-white/10 px-3 py-1 rounded-lg ml-2">{selectedTime}</span>
+              Réservation pour : <span className="font-bold text-white bg-white/10 px-3 py-1 rounded-lg ml-2">{selectedHeure}</span>
             </p>
 
             <div className="space-y-6">
               <div className="flex items-center gap-4 text-white">
                 <div className="bg-white/10 p-3 rounded-xl"><Users size={20} /></div>
-                <div><h4 className="text-sm font-bold uppercase tracking-widest">Capacity</h4><p className="text-xs text-gray-400">Up to 6 students</p></div>
+                <div><h4 className="text-sm font-bold uppercase tracking-widest">Capacité</h4><p className="text-xs text-gray-400">Jusqu'à {room.capacity || 6} étudiants</p></div>
               </div>
               <div className="flex items-center gap-4 text-white">
                 <div className="bg-white/10 p-3 rounded-xl"><Wifi size={20} /></div>
-                <div><h4 className="text-sm font-bold uppercase tracking-widest">Connectivity</h4><p className="text-xs text-gray-400">High-speed Campus Wi-Fi</p></div>
+                <div><h4 className="text-sm font-bold uppercase tracking-widest">Connectivité</h4><p className="text-xs text-gray-400">Wi-Fi Haut Débit du Campus</p></div>
               </div>
               <div className="flex items-center gap-4 text-white">
                 <div className="bg-white/10 p-3 rounded-xl"><Monitor size={20} /></div>
-                <div><h4 className="text-sm font-bold uppercase tracking-widest">Equipments</h4><p className="text-xs text-gray-400">Smart Board & 4 Power Outlets</p></div>
+                <div><h4 className="text-sm font-bold uppercase tracking-widest">Équipements</h4><p className="text-xs text-gray-400">Tableau Interactif & 4 Prises</p></div>
               </div>
             </div>
           </div>
@@ -185,40 +364,37 @@ function RoomInfoPage() {
           <div className="flex-1 flex flex-col">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-xs uppercase tracking-widest text-gray-300 font-medium">Live Smart Sensors</span>
+              <span className="text-xs uppercase tracking-widest text-gray-300 font-medium">Capteurs Intelligents en Direct</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-10">
-              <div className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition cursor-default">
-                <Thermometer className="text-white/40 mb-4" size={28} />
-                <span className="block text-4xl text-white font-light mb-1">21°</span>
-                <span className="text-[10px] uppercase tracking-widest text-gray-500">Temperature</span>
-              </div>
-
-              <div className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition cursor-default">
-                <Droplets className="text-white/40 mb-4" size={28} />
-                <span className="block text-4xl text-white font-light mb-1">42%</span>
-                <span className="text-[10px] uppercase tracking-widest text-gray-500">Humidity</span>
-              </div>
-
-              <div className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition cursor-default">
-                <Wind className="text-white/40 mb-4" size={28} />
-                <span className="block text-4xl text-white font-light mb-1">98%</span>
-                <span className="text-[10px] uppercase tracking-widest text-gray-500">Air Quality</span>
-              </div>
-
-              <div className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition cursor-default">
-                <Volume2 className="text-white/40 mb-4" size={28} />
-                <span className="block text-4xl text-white font-light mb-1">35dB</span>
-                <span className="text-[10px] uppercase tracking-widest text-gray-500">Noise (Quiet)</span>
-              </div>
+              {loadingSensors ? (
+                <div className="col-span-2 text-center text-white/50 py-10 animate-pulse">
+                  Chargement des données des capteurs...
+                </div>
+              ) : sensorsData.length > 0 ? (
+                sensorsData.map((sensor) => (
+                  <div key={sensor.id} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition cursor-default">
+                    {getSensorIcon(sensor.sensor_type)}
+                    <span className="block text-4xl text-white font-light mb-1">
+                      {sensor.latestValue !== null ? sensor.latestValue : '--'}
+                      <span className="text-xl ml-1 text-white/50">{sensor.unit || ''}</span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-widest text-gray-500">{sensor.sensor_type}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-2 text-center text-white/50 py-10">
+                  Aucun capteur installé dans cette salle.
+                </div>
+              )}
             </div>
 
             <button
-              onClick={() => alert(`Room successfully booked for ${selectedTime} !`)}
+              onClick={handleBooking}
               className="w-full py-5 bg-white text-black font-bold uppercase text-sm tracking-[0.2em] rounded-2xl hover:bg-gray-200 transition-all active:scale-95 shadow-xl"
             >
-              Confirm Booking
+              Confirmer la réservation
             </button>
           </div>
 
@@ -250,10 +426,10 @@ function SignupPage() {
         password: password,
         role: "student"
       });
-      alert('Account created successfully!');
+      alert('Compte créé avec succès !');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Signup failed');
+      setError(err.response?.data?.detail || 'Échec de l inscription');
     }
   };
 
@@ -262,38 +438,38 @@ function SignupPage() {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center mt-[5px]">
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 shadow-2xl scale-80 origin-center">
-          <h2 className="text-5xl font-serif text-white mb-2">Join Us !</h2>
-          <p className="text-gray-300 text-base mb-8 font-light">Create an account to access our intelligent campus.</p>
+          <h2 className="text-5xl font-serif text-white mb-2">Rejoignez-nous !</h2>
+          <p className="text-gray-300 text-base mb-8 font-light">Créez un compte pour accéder à notre campus intelligent.</p>
           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           <form className="space-y-5" onSubmit={handleSignup}>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">First Name</label>
+                <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Prénom</label>
                 <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" required className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Last Name</label>
+                <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Nom</label>
                 <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" required className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Email</label>
+              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">E-mail</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Password</label>
+              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Mot de passe</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********" required minLength="8" className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
-            <button type="submit" className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg mt-2">Sign Up</button>
-            <div className="relative flex items-center justify-center"><div className="w-full h-px bg-white/10"></div><span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Or</span></div>
-            <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />Sign up with google</button>
-            <p className="text-center text-sm text-gray-400 pt-2">Already have an account? <Link to="/login"><span className="text-white font-bold cursor-pointer hover:underline">Log In</span></Link></p>
+            <button type="submit" className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg mt-2">S'inscrire</button>
+            <div className="relative flex items-center justify-center"><div className="w-full h-px bg-white/10"></div><span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Ou</span></div>
+            <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />S'inscrire avec Google</button>
+            <p className="text-center text-sm text-gray-400 pt-2">Vous avez déjà un compte ? <Link to="/login"><span className="text-white font-bold cursor-pointer hover:underline">Se connecter</span></Link></p>
           </form>
         </div>
         <div className="hidden md:flex flex-col items-center justify-center text-center">
           <img src={logoImage} alt="Logo" className="w-28 h-28 mb-4" />
           <h1 className="text-5xl font-serif text-white tracking-wider mb-2">Smart Campus</h1>
-          <p className="text-sm tracking-[0.3em] uppercase text-gray-200 font-light italic">The Character of success</p>
+          <p className="text-sm tracking-[0.3em] uppercase text-gray-200 font-light italic">Le caractère du succès</p>
         </div>
       </div>
     </div>
@@ -315,10 +491,10 @@ function LoginPage() {
     try {
       const res = await authAPI.login({ email, password });
       localStorage.setItem('token', res.data.access_token);
-      alert('Logged in successfully!');
+      alert('Connexion réussie !');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed');
+      setError(err.response?.data?.detail || 'Échec de la connexion');
     }
   };
 
@@ -327,29 +503,29 @@ function LoginPage() {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
       <div className="relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center mt-[5px]">
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 shadow-2xl scale-80 origin-center">
-          <h2 className="text-5xl font-serif text-white mb-2">Welcome !</h2>
-          <p className="text-gray-300 text-base mb-10 font-light">Sign In to access our intelligent campus, and reserve your desk !</p>
+          <h2 className="text-5xl font-serif text-white mb-2">Bienvenue !</h2>
+          <p className="text-gray-300 text-base mb-10 font-light">Se connecter to access our intelligent campus, and reserve your desk !</p>
           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           <form className="space-y-8" onSubmit={handleLogin}>
             <div className="flex flex-col gap-3">
-              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Email</label>
+              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">E-mail</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Enter your email" className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
             <div className="flex flex-col gap-3">
-              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Password</label>
+              <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Mot de passe</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="********" className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
-            <div className="flex justify-between items-center px-1 text-sm"><label className="flex items-center gap-2 text-gray-400 cursor-pointer"><input type="checkbox" className="rounded border-white/10 bg-white/5" />Always remember me</label><a href="#" className="text-gray-400 hover:text-white transition">Forgot password ?</a></div>
-            <button type="submit" className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg">Log In</button>
-            <div className="relative flex items-center justify-center"><div className="w-full h-px bg-white/10"></div><span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Or</span></div>
-            <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />Sign in with google</button>
-            <p className="text-center text-sm text-gray-400 pt-4">Don't have an account? <Link to="/signup"><span className="text-white font-bold cursor-pointer hover:underline">Sign Up</span></Link></p>
+            <div className="flex justify-between items-center px-1 text-sm"><label className="flex items-center gap-2 text-gray-400 cursor-pointer"><input type="checkbox" className="rounded border-white/10 bg-white/5" />Se souvenir de moi</label><a href="#" className="text-gray-400 hover:text-white transition">Mot de passe oublié ?</a></div>
+            <button type="submit" className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg">Se connecter</button>
+            <div className="relative flex items-center justify-center"><div className="w-full h-px bg-white/10"></div><span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Ou</span></div>
+            <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />Se connecter avec Google</button>
+            <p className="text-center text-sm text-gray-400 pt-4">Vous n'avez pas de compte ? <Link to="/signup"><span className="text-white font-bold cursor-pointer hover:underline">S'inscrire</span></Link></p>
           </form>
         </div>
         <div className="hidden md:flex flex-col items-center justify-center text-center">
           <img src={logoImage} alt="Logo" className="w-28 h-28 mb-4" />
           <h1 className="text-5xl font-serif text-white tracking-wider mb-2">Smart Campus</h1>
-          <p className="text-sm tracking-[0.3em] uppercase text-gray-200 font-light italic">The Character of success</p>
+          <p className="text-sm tracking-[0.3em] uppercase text-gray-200 font-light italic">Le caractère du succès</p>
         </div>
       </div>
     </div>
@@ -360,16 +536,35 @@ function LoginPage() {
 // PAGE 5 : SIGNALEMENT (REPORT) - Version optimisée responsive
 // ============================================================================
 function ReportPage() {
+  const { user, logout } = useAuth();
   const [category, setCategory] = useState(null);
   const [roomId, setRoomId] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoadingRooms(true);
+        const res = await roomsAPI.getAll();
+        setRooms(res.data);
+        if (res.data.length > 0) setRoomId(res.data[0].id.toString());
+      } catch (err) {
+        console.error("Failed to fetch rooms", err);
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+    fetchRooms();
+  }, []);
 
   const handleReport = async (e) => {
     e.preventDefault();
     if (!category) {
-      alert("Please select a category first !");
+      alert("Veuillez d'abord sélectionner une catégorie !");
       return;
     }
     setError(null);
@@ -381,7 +576,7 @@ function ReportPage() {
       });
       setIsSubmitted(true);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to submit report');
+      setError(err.response?.data?.detail || "Échec de l'envoi du signalement");
     }
   };
 
@@ -393,38 +588,32 @@ function ReportPage() {
     >
       <div className="absolute inset-0 bg-black/65 backdrop-blur-md"></div>
 
-      <nav className="relative z-10 flex justify-between items-center py-8 px-12 w-full">
-        <div className="w-12 h-12">
-          <Link to="/">
-            <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
-          </Link>
-        </div>
-      </nav>
+      <Navbar user={user} logout={logout} />
 
       {/* Modification ici : -mt-24 au lieu de -mt-10 pour remonter le bloc, et pb-10 pour l'espace en bas */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-24 px-6 pb-10">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center py-10 px-6 pb-10">
 
         {/* Modification ici : p-8 au lieu de p-12, et gap-10 au lieu de gap-16 pour tasser légèrement */}
         <div className="w-full max-w-6xl bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 shadow-2xl flex flex-col md:flex-row gap-10">
 
           <div className="flex-1 flex flex-col justify-center">
             <Link to="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition w-fit mb-6 uppercase tracking-widest text-xs">
-              <ArrowLeft size={16} /> Back to Home
+              <ArrowLeft size={16} /> Retour à l'Accueil
             </Link>
 
             <h2 className="text-5xl font-serif text-white mb-2 flex items-center gap-4">
               <AlertTriangle size={40} className="text-white/80" />
-              Report Issue
+              Signaler un problème
             </h2>
             <p className="text-gray-300 font-light mb-8 leading-relaxed">
-              Help us maintain a perfect environment. Select the type of issue, specify the location, and our maintenance team will be notified in real-time.
+              Aidez-nous à maintenir un environnement parfait. Sélectionnez le type de problème, indiquez le lieu, et notre équipe de maintenance sera alertée en temps réel.
             </p>
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 w-fit">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-2">Live Response Time</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-2">Temps de réponse en direct</h4>
               <div className="flex items-center gap-3 text-gray-400">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-sm">Team is currently active (~15 min ETA)</span>
+                <span className="text-sm">Équipe active (Attente ~15 min)</span>
               </div>
             </div>
           </div>
@@ -435,13 +624,13 @@ function ReportPage() {
                 <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mb-4">
                   <AlertTriangle size={32} />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Report Submitted!</h3>
-                <p className="text-gray-400 mb-6">Thank you for keeping our campus smart and safe.</p>
+                <h3 className="text-2xl font-bold text-white mb-2">Signalement envoyé !</h3>
+                <p className="text-gray-400 mb-6">Merci de garder notre campus intelligent et sûr.</p>
                 <button
                   onClick={() => setIsSubmitted(false)}
                   className="px-6 py-3 bg-white text-black font-bold uppercase text-xs tracking-widest rounded-xl hover:bg-gray-200 transition"
                 >
-                  Submit another issue
+                  Signaler un autre problème
                 </button>
               </div>
             ) : (
@@ -450,42 +639,53 @@ function ReportPage() {
                 <div className="grid grid-cols-2 gap-4 mb-2">
                   <button type="button" onClick={() => setCategory('water')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'water' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
                     <Droplets size={28} />
-                    <span className="text-xs uppercase tracking-widest font-semibold">Water</span>
+                    <span className="text-xs uppercase tracking-widest font-semibold">Eau</span>
                   </button>
                   <button type="button" onClick={() => setCategory('electricity')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'electricity' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
                     <Zap size={28} />
-                    <span className="text-xs uppercase tracking-widest font-semibold">Power</span>
+                    <span className="text-xs uppercase tracking-widest font-semibold">Électricité</span>
                   </button>
                   <button type="button" onClick={() => setCategory('damage')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'damage' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
                     <Wrench size={28} />
-                    <span className="text-xs uppercase tracking-widest font-semibold">Damage</span>
+                    <span className="text-xs uppercase tracking-widest font-semibold">Dégâts</span>
                   </button>
                   <button type="button" onClick={() => setCategory('other')} className={`p-6 border rounded-3xl transition flex flex-col items-center justify-center gap-3 ${category === 'other' ? 'bg-white text-black border-white' : 'border-white/10 text-white hover:bg-white/10'}`}>
                     <AlertTriangle size={28} />
-                    <span className="text-xs uppercase tracking-widest font-semibold">Other</span>
+                    <span className="text-xs uppercase tracking-widest font-semibold">Autre</span>
                   </button>
                 </div>
 
                 {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                <input
-                  type="text"
-                  value={roomId}
-                  onChange={(e) => setRoomId(e.target.value)}
-                  placeholder="Room ID (e.g., 1)"
-                  required
-                  className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
-                />
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs uppercase tracking-widest text-gray-400 font-bold ml-1">Lieu de l'incident</label>
+                  {loadingRooms ? (
+                    <div className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white animate-pulse">Chargement des salles...</div>
+                  ) : (
+                    <select
+                      value={roomId}
+                      onChange={(e) => setRoomId(e.target.value)}
+                      required
+                      className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-white/20 transition appearance-none cursor-pointer"
+                    >
+                      {rooms.map(room => (
+                        <option key={room.id} value={room.id} className="bg-black text-white">
+                          {room.name} ({room.room_type})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
                 <textarea
                   rows="3"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the issue briefly..."
+                  placeholder="Décrivez brièvement le problème..."
                   required
                   className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition resize-none"
                 ></textarea>
 
                 <button type="submit" className="w-full py-5 bg-white text-black font-bold uppercase text-sm tracking-[0.2em] rounded-2xl hover:bg-gray-200 transition-all active:scale-95 shadow-xl mt-2">
-                  Send Alert
+                  Envoyer l'alerte
                 </button>
               </form>
             )}
@@ -501,52 +701,67 @@ function ReportPage() {
 // ============================================================================
 function LandingPage() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [date, setDate] = useState('');
+  const [time, setHeure] = useState('');
+  const [roomType, setRoomType] = useState('study');
+
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const handleCheckAvailability = async () => {
+    if (!date || !time) {
+      alert('Veuillez sélectionner une date et une heure');
+      return;
+    }
+
+    setLoadingRooms(true);
+    setHasSearched(true);
+
+    try {
+      const startDateHeure = new Date(`${date}T${time}`);
+      const endDateHeure = new Date(startDateHeure.getHeure() + 60 * 60 * 1000); // 1 hour later
+
+      const res = await roomsAPI.getAvailable(startDateHeure.toISOString(), endDateHeure.toISOString());
+
+      let filtered = res.data;
+      if (roomType && roomType !== 'all') {
+        filtered = res.data.filter(r => r.room_type === roomType || roomType === 'study');
+      }
+      setAvailableRooms(filtered);
+    } catch (err) {
+      console.error("Échec de la récupération des salles", err);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  const formattedHeure = time ? time.replace(':', 'h') : '';
+
   return (
     <>
       <section className="relative min-h-screen flex flex-col bg-cover bg-center" style={{ backgroundImage: `url(${homeImage})` }}>
         <div className="absolute inset-0 bg-black/45"></div>
-        <nav className="relative z-10 flex justify-between items-center py-8 px-12 w-full text-white">
-          <div className="w-12 h-12">
-            <Link to="/"><img src={logoImage} alt="Logo" className="w-full h-full object-contain" /></Link>
-          </div>
-          <div className="flex items-center gap-12 text-sm font-medium tracking-wide">
-            <a href="#" className="hover:text-gray-300 transition">Home</a>
-            <a href="#" className="hover:text-gray-300 transition">About Us</a>
-            {user ? (
-              <div className="flex items-center gap-6">
-                <span className="text-white font-medium bg-white/10 px-4 py-2 rounded-full border border-white/10 shadow-sm backdrop-blur-md">
-                  {user.first_name} {user.last_name}
-                </span>
-                <button onClick={logout} className="text-sm font-semibold text-gray-300 hover:text-red-400 transition bg-black/20 px-4 py-2 rounded-full border border-transparent hover:border-red-500/50">
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <>
-                <Link to="/signup" className="hover:text-gray-300 transition">Sign Up</Link>
-                <Link to="/login"><button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">Sign In</button></Link>
-              </>
-            )}
-          </div>
-        </nav>
+        <Navbar user={user} logout={logout} />
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center px-6">
-          <div className="flex flex-col items-center mb-20 -mt-10">
+          <div className="flex flex-col items-center mb-20 py-10">
             <div className="w-24 h-24 mb-6"><img src={logoImage} alt="Logo Smart Campus" className="w-full h-full object-contain" /></div>
             <h1 className="text-7xl font-serif mb-3 tracking-wider text-white">Smart Campus</h1>
-            <p className="text-lg tracking-[0.3em] uppercase text-gray-200 font-light">The Character of success</p>
+            <p className="text-lg tracking-[0.3em] uppercase text-gray-200 font-light">Le caractère du succès</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl px-4 text-white">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl px-4 text-white -mt-16">
             <div className="bg-black/55 backdrop-blur-xl rounded-[2rem] p-8 flex items-start gap-6 border border-white/10 hover:bg-black/65 transition-all duration-300 group cursor-pointer">
               <div className="bg-white/5 p-3 rounded-xl"><GraduationCap className="w-10 h-10 text-white" /></div>
-              <div><h3 className="font-bold text-2xl mb-2">Student</h3><p className="text-sm text-gray-300 font-light italic">Find, book, and report: your campus in real-time.</p></div>
+              <div><h3 className="font-bold text-2xl mb-2">Étudiant</h3><p className="text-sm text-gray-300 font-light italic">Trouvez, réservez et signalez : votre campus en temps réel.</p></div>
             </div>
             <div className="bg-black/55 backdrop-blur-xl rounded-[2rem] p-8 flex items-start gap-6 border border-white/10 hover:bg-black/65 transition-all duration-300 group cursor-pointer">
               <div className="bg-white/5 p-3 rounded-xl"><Users className="w-10 h-10 text-white" /></div>
-              <div><h3 className="font-bold text-2xl mb-2">Staff</h3><p className="text-sm text-gray-300 font-light italic">Monitor, manage, and optimize your campus infrastructure.</p></div>
+              <div><h3 className="font-bold text-2xl mb-2">Personnel</h3><p className="text-sm text-gray-300 font-light italic">Surveillez, gérez et optimisez les infrastructures du campus.</p></div>
             </div>
             <div className="bg-black/55 backdrop-blur-xl rounded-[2rem] p-8 flex items-start gap-6 border border-white/10 hover:bg-black/65 transition-all duration-300 group cursor-pointer">
               <div className="bg-white/5 p-3 rounded-xl"><Leaf className="w-10 h-10 text-white" /></div>
-              <div><h3 className="font-bold text-2xl mb-2">Sustainability</h3><p className="text-sm text-gray-300 font-light italic">Smart energy management for a greener campus.</p></div>
+              <div><h3 className="font-bold text-2xl mb-2">Développement durable</h3><p className="text-sm text-gray-300 font-light italic">Gestion intelligente de l'énergie pour un campus plus vert.</p></div>
             </div>
           </div>
         </div>
@@ -558,7 +773,7 @@ function LandingPage() {
           <p className="text-gray-300 max-w-lg font-light">Lorem Ipsum is simply dummy text of the printing and typesetting industry...</p>
         </div>
         <div className="w-full md:w-1/2 relative flex items-center justify-center md:justify-end md:pr-12">
-          <div className="relative w-full max-w-[270px] -mt-20 left-[-50px] -mb-20 z-30">
+          <div className="relative w-full max-w-[320px] z-30">
             <img src={filleImage} className="w-full h-auto shadow-2xl" alt="fille" />
           </div>
         </div>
@@ -567,29 +782,76 @@ function LandingPage() {
       <section className="relative w-full py-40 bg-cover bg-center flex flex-col items-center" style={{ backgroundImage: `url(${buImage})` }}>
         <div className="absolute inset-0 bg-black/60"></div>
         <div className="relative z-10 w-full max-w-6xl px-6">
-          <div className="text-center mb-20"><h2 className="text-5xl font-serif text-white tracking-wide">Online reservation</h2></div>
+          <div className="text-center mb-20"><h2 className="text-5xl font-serif text-white tracking-wide">Réservation en ligne</h2></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
-            <div className="flex flex-col gap-4"><div className="flex items-center gap-3"><Calendar size={20} className="text-white" /><label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Date</label></div><input type="date" className="bg-transparent border-b border-white/40 py-2 text-white outline-none" /></div>
-            <div className="flex flex-col gap-4"><div className="flex items-center gap-3"><Clock size={20} className="text-white" /><label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Time</label></div><input type="time" className="bg-transparent border-b border-white/40 py-2 text-white outline-none" /></div>
-            <div className="flex flex-col gap-4"><div className="flex items-center gap-3"><MapPin size={20} className="text-white" /><label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Room Type</label></div><select className="bg-transparent border-b border-white/40 py-2 text-white outline-none appearance-none"><option className="bg-black">Study Room</option></select></div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Calendar size={20} className="text-white" />
+                <label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Date</label>
+              </div>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent border-b border-white/40 py-2 text-white outline-none" />
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Clock size={20} className="text-white" />
+                <label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Heure</label>
+              </div>
+              <input type="time" value={time} onChange={(e) => setHeure(e.target.value)} className="bg-transparent border-b border-white/40 py-2 text-white outline-none" />
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <MapPin size={20} className="text-white" />
+                <label className="text-sm uppercase tracking-[0.2em] text-white font-medium">Type de salle</label>
+              </div>
+              <select value={roomType} onChange={(e) => setRoomType(e.target.value)} className="bg-transparent border-b border-white/40 py-2 text-white outline-none appearance-none">
+                <option value="study" className="bg-black">Salle d'étude</option>
+                <option value="lecture" className="bg-black">Amphithéâtre</option>
+                <option value="all" className="bg-black">Tous les types</option>
+              </select>
+            </div>
           </div>
-          <div className="flex justify-center">
-            <Link to="/reservation">
-              <button className="px-12 py-4 bg-transparent border border-white text-white text-sm uppercase tracking-widest font-semibold hover:bg-white hover:text-black transition-all">Check Availability</button>
-            </Link>
+
+          <div className="flex justify-center mb-10">
+            <button onClick={handleCheckAvailability} className="px-12 py-4 bg-transparent border border-white text-white text-sm uppercase tracking-widest font-semibold hover:bg-white hover:text-black transition-all">
+              Vérifier la disponibilité
+            </button>
           </div>
+
+          {hasSearched && (
+            <div className="w-full flex flex-col items-center mt-6">
+              {loadingRooms ? (
+                <div className="text-white animate-pulse">Recherche des salles disponibles...</div>
+              ) : availableRooms.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+                  {availableRooms.map(room => (
+                    <Link key={room.id} to="/room-info" state={{ time: formattedHeure, room: room }}>
+                      <div className="bg-black/60 hover:bg-white/20 border border-white/20 rounded-2xl p-6 transition-all cursor-pointer text-left shadow-lg">
+                        <h4 className="text-xl font-bold text-white mb-2">{room.name}</h4>
+                        <div className="flex justify-between items-center text-sm text-gray-300">
+                          <span className="capitalize">{room.room_type}</span>
+                          <span>Capacité : {room.capacity}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-white/80 italic bg-black/40 px-8 py-4 rounded-xl">Aucune salle disponible pour ces critères.</div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
       <section className="relative w-full py-32 bg-black flex flex-col items-center text-white">
         <div className="w-full max-w-6xl px-6">
-          <div className="flex flex-col items-center mb-16"><AlertTriangle className="mb-4" size={40} /><h2 className="text-5xl font-serif">Report an Issue</h2><div className="w-20 h-px bg-white/30 mt-6"></div></div>
+          <div className="flex flex-col items-center mb-16"><AlertTriangle className="mb-4" size={40} /><h2 className="text-5xl font-serif">Signaler un problème</h2><div className="w-20 h-px bg-white/30 mt-6"></div></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
             <div className="grid grid-cols-2 gap-4 text-white">
-              <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><Droplets size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Water</span></button>
+              <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><Droplets size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Eau</span></button>
               <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><Zap size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Electricity</span></button>
-              <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><Wrench size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Damage</span></button>
-              <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><AlertTriangle size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Other</span></button>
+              <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><Wrench size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Dégâts</span></button>
+              <button className="p-8 border border-white/10 rounded-3xl hover:bg-white hover:text-black transition flex flex-col items-center"><AlertTriangle size={32} className="mb-4" /><span className="text-xs uppercase tracking-widest">Autre</span></button>
             </div>
             <div className="flex flex-col gap-8">
               <Link to="/report" className="w-full">
@@ -622,6 +884,181 @@ function LandingPage() {
 }
 
 // ============================================================================
+// PAGE 7 : MES RÉSERVATIONS
+// ============================================================================
+function MyBookingsPage() {
+  const { user, logout } = useAuth();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const res = await bookingsAPI.getMyBookings();
+        setBookings(res.data);
+      } catch (err) {
+        console.error("Failed to fetch bookings", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchBookings();
+  }, [user]);
+
+  const handleCancel = async (id) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir annuler cette réservation ?")) return;
+    try {
+      await bookingsAPI.cancel(id);
+      setBookings(bookings.filter(b => b.id !== id));
+      alert("Réservation annulée.");
+    } catch (err) {
+      alert("Erreur lors de l'annulation.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden" style={{ backgroundImage: `url(${buImage})`, backgroundSize: 'cover' }}>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl"></div>
+      <Navbar user={user} logout={logout} />
+
+      <div className="relative z-10 max-w-6xl mx-auto w-full px-6 py-20">
+        <div className="flex items-center gap-6 mb-12">
+          <div className="bg-white/10 p-4 rounded-3xl"><BookOpen size={32} /></div>
+          <div>
+            <h2 className="text-5xl font-serif text-white">Mes réservations</h2>
+            <p className="text-gray-400 font-light mt-2 italic">Gérez vos créneaux réservés sur le campus.</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-20 text-white animate-pulse">Chargement de vos réservations...</div>
+        ) : bookings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {bookings.map(booking => (
+              <div key={booking.id} className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 hover:bg-white/10 transition-all group">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold flex items-center gap-2">
+                    <CheckCircle size={12} /> Confirmé
+                  </div>
+                </div>
+                <h4 className="text-2xl font-bold text-white mb-4">Salle #{booking.room_id}</h4>
+                <div className="space-y-4 mb-8">
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <Calendar size={16} className="opacity-50" />
+                    <span className="text-sm">{new Date(booking.start_time).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <Clock size={16} className="opacity-50" />
+                    <span className="text-sm">
+                      {new Date(booking.start_time).getHours()}h00 - {new Date(booking.end_time).getHours()}h00
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleCancel(booking.id)}
+                  className="w-full py-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl hover:bg-red-500 hover:text-white transition-all text-xs font-bold uppercase tracking-widest"
+                >
+                  Annuler la réservation
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-32 bg-white/5 border border-white/10 rounded-[3rem] border-dashed">
+            <Calendar size={48} className="mx-auto mb-6 opacity-20 text-white" />
+            <p className="text-xl text-gray-400 font-light italic">Vous n'avez pas encore de réservation.</p>
+            <Link to="/reservation">
+              <button className="mt-8 px-8 py-3 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition">
+                Réserver une salle
+              </button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// PAGE 8 : MES SIGNALEMENTS
+// ============================================================================
+function MyIncidentsPage() {
+  const { user, logout } = useAuth();
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      try {
+        setLoading(true);
+        // On récupère tout et on filtre côté front car le back ne gère pas mine=true pour les incidents
+        const res = await incidentsAPI.getAll();
+        const myIncidents = res.data.filter(inc => inc.reported_by === user?.id);
+        setIncidents(myIncidents);
+      } catch (err) {
+        console.error("Failed to fetch incidents", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchIncidents();
+  }, [user]);
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col relative overflow-hidden" style={{ backgroundImage: `url(${buImage})`, backgroundSize: 'cover' }}>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl"></div>
+      <Navbar user={user} logout={logout} />
+
+      <div className="relative z-10 max-w-6xl mx-auto w-full px-6 py-20">
+        <div className="flex items-center gap-6 mb-12">
+          <div className="bg-white/10 p-4 rounded-3xl"><ClipboardList size={32} /></div>
+          <div>
+            <h2 className="text-5xl font-serif text-white">Mes signalements</h2>
+            <p className="text-gray-400 font-light mt-2 italic">Suivez l'état de vos signalements de maintenance.</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-20 text-white animate-pulse">Chargement de vos signalements...</div>
+        ) : incidents.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 max-w-4xl">
+            {incidents.map(incident => (
+              <div key={incident.id} className="bg-white/5 border border-white/10 rounded-[2rem] p-8 flex flex-col md:flex-row gap-8 items-start hover:bg-white/10 transition-all">
+                <div className={`p-4 rounded-2xl ${incident.status === 'resolved' ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                  {incident.status === 'resolved' ? <CheckCircle size={24} /> : <Clock3 size={24} />}
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    <span className="text-[10px] uppercase tracking-widest font-bold bg-white/10 px-3 py-1 rounded-full text-gray-300">Salle #{incident.room_id}</span>
+                    <span className={`text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full ${incident.status === 'resolved' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                      {incident.status === 'resolved' ? 'Résolu' : 'En cours'}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-widest font-bold bg-red-500/10 text-red-400 px-3 py-1 rounded-full">Sévérité: {incident.severity}</span>
+                  </div>
+                  <h4 className="text-lg text-white font-medium mb-2">{incident.description}</h4>
+                  <p className="text-xs text-gray-500 italic">Signalé le {new Date(incident.created_at).toLocaleDateString('fr-FR')} à {new Date(incident.created_at).toLocaleTimeString('fr-FR')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-32 bg-white/5 border border-white/10 rounded-[3rem] border-dashed">
+            <AlertTriangle size={48} className="mx-auto mb-6 opacity-20 text-white" />
+            <p className="text-xl text-gray-400 font-light italic">Vous n'avez pas encore effectué de signalement.</p>
+            <Link to="/report">
+              <button className="mt-8 px-8 py-3 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition">
+                Signaler un problème
+              </button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // ROUTEUR PRINCIPAL
 // ============================================================================
 export default function App() {
@@ -634,6 +1071,8 @@ export default function App() {
         <Route path="/reservation" element={<ReservationPage />} />
         <Route path="/room-info" element={<RoomInfoPage />} />
         <Route path="/report" element={<ReportPage />} />
+        <Route path="/my-bookings" element={<MyBookingsPage />} />
+        <Route path="/my-incidents" element={<MyIncidentsPage />} />
       </Routes>
     </div>
   );
