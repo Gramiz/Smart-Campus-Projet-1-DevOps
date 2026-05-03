@@ -1,0 +1,619 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "panels": [],
+      "title": "1. Comportement utilisateur",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Distribution des réservations par heure de la journée — révèle les pics d'utilisation.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.85,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": { "mode": "single", "sort": "none" },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT HOUR(start_time) AS hour, COUNT(*) AS bookings\nFROM bookings\nWHERE status <> 'cancelled' AND $__timeFilter(start_time)\nGROUP BY HOUR(start_time)\nORDER BY hour;",
+          "refId": "A"
+        }
+      ],
+      "title": "Réservations par heure de la journée",
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Répartition des réservations actives par rôle utilisateur.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 1 },
+      "id": 2,
+      "options": {
+        "displayLabels": ["percent", "name"],
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "values": ["value"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT u.role AS metric, COUNT(b.id) AS value\nFROM bookings b\nJOIN users u ON u.id = b.user_id\nWHERE b.status <> 'cancelled' AND $__timeFilter(b.start_time)\nGROUP BY u.role;",
+          "refId": "A"
+        }
+      ],
+      "title": "Réservations par rôle",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Top 10 salles avec le plus haut taux d'occupation moyen mesuré par les capteurs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 80 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 },
+      "id": 3,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT r.room_number AS room, ROUND(AVG(sd.value) * 100, 1) AS avg_pct\nFROM rooms r\nJOIN sensors s ON s.room_id = r.id AND s.sensor_type = 'occupancy'\nJOIN sensor_data sd ON sd.sensor_id = s.id\nWHERE $__timeFilter(sd.timestamp)\nGROUP BY r.id, r.room_number\nORDER BY avg_pct DESC\nLIMIT 10;",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 10 salles — occupation moyenne",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Évolution journalière du taux d'occupation moyen — utile pour voir les patterns hebdomadaires.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "id": 4,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CAST(DATE(sd.timestamp) AS DATETIME) AS time,\n  ROUND(AVG(sd.value) * 100, 2) AS avg_occupancy_pct\nFROM sensor_data sd\nJOIN sensors s ON s.id = sd.sensor_id AND s.sensor_type = 'occupancy'\nWHERE $__timeFilter(sd.timestamp)\nGROUP BY DATE(sd.timestamp)\nORDER BY time;",
+          "refId": "A"
+        }
+      ],
+      "title": "Tendance journalière du taux d'occupation",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 200,
+      "panels": [],
+      "title": "2. Détection d'anomalies",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Réservations dont l'occupation réelle (capteur) est restée < 20% — salles réservées mais inutilisées.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "avg_occ_pct" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 10 }] } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  b.id AS booking_id,\n  r.room_number AS room,\n  b.start_time,\n  b.end_time,\n  ROUND(AVG(sd.value) * 100, 1) AS avg_occ_pct\nFROM bookings b\nJOIN rooms r ON r.id = b.room_id\nJOIN sensors s ON s.room_id = r.id AND s.sensor_type = 'occupancy'\nJOIN sensor_data sd ON sd.sensor_id = s.id AND sd.timestamp BETWEEN b.start_time AND b.end_time\nWHERE b.status <> 'cancelled' AND $__timeFilter(b.start_time)\nGROUP BY b.id, r.room_number, b.start_time, b.end_time\nHAVING AVG(sd.value) < 0.2\nORDER BY b.start_time DESC\nLIMIT 50;",
+          "refId": "A"
+        }
+      ],
+      "title": "Ghost rooms — réservées mais vides",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Mesures capteur dont le z-score (écart à la moyenne en σ) dépasse 3 — valeurs aberrantes statistiques.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "z_score" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "yellow", "value": null },
+                    { "color": "orange", "value": 3 },
+                    { "color": "red", "value": 5 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT\n    sd.sensor_id,\n    sd.value,\n    sd.timestamp,\n    s.sensor_type,\n    s.room_id,\n    AVG(sd.value)        OVER (PARTITION BY sd.sensor_id) AS mu,\n    STDDEV_POP(sd.value) OVER (PARTITION BY sd.sensor_id) AS sigma\n  FROM sensor_data sd\n  JOIN sensors s ON s.id = sd.sensor_id\n  WHERE $__timeFilter(sd.timestamp)\n)\nSELECT\n  sensor_id,\n  sensor_type,\n  room_id,\n  ROUND(value, 3) AS value,\n  timestamp,\n  ROUND(ABS((value - mu) / NULLIF(sigma, 0)), 2) AS z_score\nFROM stats\nWHERE sigma > 0 AND ABS((value - mu) / sigma) >= 3\nORDER BY z_score DESC\nLIMIT 50;",
+          "refId": "A"
+        }
+      ],
+      "title": "Anomalies capteurs (|z-score| ≥ 3)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Salles ayant accumulé le plus d'incidents de sévérité élevée ou critique.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 3 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 27 },
+      "id": 7,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.85,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": { "mode": "single", "sort": "none" },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT r.room_number AS room, COUNT(*) AS incidents\nFROM incidents i\nJOIN rooms r ON r.id = i.room_id\nWHERE i.severity IN ('high', 'critical') AND $__timeFilter(i.created_at)\nGROUP BY r.id, r.room_number\nORDER BY incidents DESC\nLIMIT 10;",
+          "refId": "A"
+        }
+      ],
+      "title": "Salles les plus problématiques (incidents high/critical)",
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Nombre d'anomalies capteurs détectées sur la fenêtre.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 20 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 27 },
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT sd.value,\n         AVG(sd.value)        OVER (PARTITION BY sd.sensor_id) AS mu,\n         STDDEV_POP(sd.value) OVER (PARTITION BY sd.sensor_id) AS sigma\n  FROM sensor_data sd\n  WHERE $__timeFilter(sd.timestamp)\n)\nSELECT COUNT(*) AS anomalies\nFROM stats\nWHERE sigma > 0 AND ABS((value - mu) / sigma) >= 3;",
+          "refId": "A"
+        }
+      ],
+      "title": "Anomalies détectées",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Nombre de réservations identifiées comme ghost (occupation moyenne < 20%) sur la fenêtre.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 3 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 27 },
+      "id": 9,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS ghost_bookings\nFROM (\n  SELECT b.id\n  FROM bookings b\n  JOIN sensors s ON s.room_id = b.room_id AND s.sensor_type = 'occupancy'\n  JOIN sensor_data sd ON sd.sensor_id = s.id AND sd.timestamp BETWEEN b.start_time AND b.end_time\n  WHERE b.status <> 'cancelled' AND $__timeFilter(b.start_time)\n  GROUP BY b.id\n  HAVING AVG(sd.value) < 0.2\n) t;",
+          "refId": "A"
+        }
+      ],
+      "title": "Ghost bookings",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 300,
+      "panels": [],
+      "title": "3. Modèle prédictif simple (next-day forecast)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Prédiction naïve du nombre de réservations par heure pour la journée suivante (moyenne sur 14 jours glissants).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-GrYlRd" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "lineWidth": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 35 },
+      "id": 10,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": { "mode": "single", "sort": "none" },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT 0 AS h UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3\n  UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7\n  UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL SELECT 11\n  UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15\n  UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19\n  UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23\n),\nagg AS (\n  SELECT HOUR(start_time) AS h, COUNT(*) AS c\n  FROM bookings\n  WHERE status <> 'cancelled' AND start_time >= NOW() - INTERVAL 14 DAY\n  GROUP BY HOUR(start_time)\n)\nSELECT CONCAT(LPAD(hours.h, 2, '0'), 'h') AS hour, ROUND(COALESCE(agg.c, 0) / 14.0, 2) AS predicted_bookings\nFROM hours\nLEFT JOIN agg ON agg.h = hours.h\nORDER BY hours.h;",
+          "refId": "A"
+        }
+      ],
+      "title": "Prévision réservations next-day par heure (moy. 14j)",
+      "type": "barchart"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Total estimé de réservations pour la prochaine journée (somme des moyennes horaires sur 14j).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 35 },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COUNT(*) / 14.0, 1) AS predicted_total_bookings_next_day\nFROM bookings\nWHERE status <> 'cancelled' AND start_time >= NOW() - INTERVAL 14 DAY;",
+          "refId": "A"
+        }
+      ],
+      "title": "Réservations prévues demain",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+      "description": "Comparaison de la moyenne horaire réelle (7j) vs prévision (14j) — pour évaluer la dérive du modèle.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "fillOpacity": 30,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 39 },
+      "id": 12,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "mysql", "uid": "smartcampus_mysql" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT 0 AS h UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3\n  UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7\n  UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL SELECT 11\n  UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15\n  UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19\n  UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23\n),\nactual AS (\n  SELECT HOUR(start_time) AS h, COUNT(*) / 7.0 AS v\n  FROM bookings\n  WHERE status <> 'cancelled' AND start_time >= NOW() - INTERVAL 7 DAY\n  GROUP BY HOUR(start_time)\n),\nforecast AS (\n  SELECT HOUR(start_time) AS h, COUNT(*) / 14.0 AS v\n  FROM bookings\n  WHERE status <> 'cancelled' AND start_time >= NOW() - INTERVAL 14 DAY\n  GROUP BY HOUR(start_time)\n)\nSELECT TIMESTAMP(CURDATE(), MAKETIME(hours.h, 0, 0)) AS time,\n       ROUND(COALESCE(actual.v, 0), 2)   AS actual_7d_avg,\n       ROUND(COALESCE(forecast.v, 0), 2) AS forecast_14d_avg\nFROM hours\nLEFT JOIN actual   ON actual.h   = hours.h\nLEFT JOIN forecast ON forecast.h = hours.h\nORDER BY hours.h;",
+          "refId": "A"
+        }
+      ],
+      "title": "Réel (7j) vs prévision (14j)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["smart-campus", "analytics", "data"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Smart Campus — Analytics",
+  "uid": "smart-campus-analytics",
+  "version": 1,
+  "weekStart": ""
+}
