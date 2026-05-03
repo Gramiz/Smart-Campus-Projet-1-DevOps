@@ -88,3 +88,8 @@ jobs:
 
             curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:5173
             curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8080/
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:3000/api/health
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:9090/-/healthy
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8081/
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8082/
+            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:3100/ready
