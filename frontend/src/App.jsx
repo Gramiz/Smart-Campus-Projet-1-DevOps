@@ -973,7 +973,7 @@ function ReportPage() {
       await incidentsAPI.create({
         // L'API attend un entier ; fallback sur 1 si la valeur n'est pas définie
         room_id: parseInt(roomId) || 1,
-        // La catégorie est préfixée en majuscules dans la description pour faciliter le tri côté back
+        //  La catégorie est préfixée en majuscules dans la description pour faciliter le tri côté back
         description: `[${category.toUpperCase()}] ${description}`,
         severity: "medium",
       });
