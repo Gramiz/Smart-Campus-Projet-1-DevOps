@@ -92,6 +92,9 @@ jobs:
       - name: Build frontend image
         run: docker build -t smart-campus-frontend:ci ./frontend
 
+      - name: Build frontend production image
+        run: docker build -f frontend/Dockerfile.prod --build-arg VITE_API_BASE_URL=http://localhost:8080 -t smart-campus-frontend:prod-ci ./frontend
+
       - name: Validate Docker Compose config
         run: |
           MARIADB_ROOT_PASSWORD=root_password \
