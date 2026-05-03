@@ -770,7 +770,9 @@ function LandingPage() {
       <section className="relative w-full flex flex-col md:flex-row bg-black min-h-[400px] z-20">
         <div className="w-full md:w-1/2 p-12 md:pl-24 flex flex-col justify-center text-white">
           <h2 className="text-6xl font-serif mb-6">Smart Campus</h2>
-          <p className="text-gray-300 max-w-lg font-light">Lorem Ipsum is simply dummy text of the printing and typesetting industry...</p>
+          <p className="text-gray-300 max-w-lg font-light leading-relaxed">
+            Optimisez votre vie étudiante grâce à un campus connecté. Réservez vos espaces de travail en temps réel, consultez les conditions environnementales de vos salles et contribuez à l'amélioration de votre établissement.
+          </p>
         </div>
         <div className="w-full md:w-1/2 relative flex items-center justify-center md:justify-end md:pr-12">
           <div className="relative w-full max-w-[320px] z-30">
