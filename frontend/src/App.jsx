@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { authAPI, incidentsAPI } from './api';
 import {
   GraduationCap, Users, Leaf, Calendar, Clock, MapPin,
   AlertTriangle, Droplets, Zap, Wrench, Thermometer, Wind, Sun, Building,
@@ -13,9 +14,40 @@ import buImage from './assets/bu-bg.png';
 import meteoImage from './assets/meteo.png';
 
 // ============================================================================
+// HOOK D'AUTHENTIFICATION
+// ============================================================================
+function useAuth() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await authAPI.getMe();
+          setUser(res.data);
+        } catch (err) {
+          console.error("Failed to fetch user", err);
+        }
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    window.location.reload();
+  };
+
+  return { user, logout };
+}
+
+// ============================================================================
 // PAGE 1 : CHOIX DE L'HORAIRE DE RESERVATION
 // ============================================================================
 function ReservationPage() {
+  const { user, logout } = useAuth();
   const [selectedTime, setSelectedTime] = useState(null);
 
   const times = [
@@ -40,12 +72,25 @@ function ReservationPage() {
         <div className="flex items-center gap-12 text-sm font-medium tracking-wide text-white">
           <Link to="/" className="hover:text-gray-300 transition">Home</Link>
           <a href="#" className="hover:text-gray-300 transition">About Us</a>
-          <Link to="/signup" className="hover:text-gray-400 transition">Sign Up</Link>
-          <Link to="/login">
-            <button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">
-              Sign In
-            </button>
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-6">
+              <span className="text-white font-medium bg-white/10 px-4 py-2 rounded-full border border-white/10 shadow-sm backdrop-blur-md">
+                {user.first_name} {user.last_name}
+              </span>
+              <button onClick={logout} className="text-sm font-semibold text-gray-300 hover:text-red-400 transition bg-black/20 px-4 py-2 rounded-full border border-transparent hover:border-red-500/50">
+                Logout
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link to="/signup" className="hover:text-gray-400 transition">Sign Up</Link>
+              <Link to="/login">
+                <button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">
+                  Sign In
+                </button>
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -187,6 +232,31 @@ function RoomInfoPage() {
 // PAGE 3 : INSCRIPTION
 // ============================================================================
 function SignupPage() {
+  const navigate = useNavigate();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      await authAPI.register({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password: password,
+        role: "student"
+      });
+      alert('Account created successfully!');
+      navigate('/login');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Signup failed');
+    }
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-cover bg-center flex items-center justify-center p-4" style={{ backgroundImage: `url(${homeImage})` }}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
@@ -194,26 +264,27 @@ function SignupPage() {
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 shadow-2xl scale-80 origin-center">
           <h2 className="text-5xl font-serif text-white mb-2">Join Us !</h2>
           <p className="text-gray-300 text-base mb-8 font-light">Create an account to access our intelligent campus.</p>
-          <form className="space-y-5">
+          {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
+          <form className="space-y-5" onSubmit={handleSignup}>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">First Name</label>
-                <input type="text" placeholder="John" className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
+                <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" required className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Last Name</label>
-                <input type="text" placeholder="Doe" className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
+                <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" required className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Email</label>
-              <input type="email" placeholder="Enter your email" className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Password</label>
-              <input type="password" placeholder="********" className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********" required minLength="8" className="bg-white/10 border border-white/5 rounded-2xl p-3.5 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
-            <button className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg mt-2">Sign Up</button>
+            <button type="submit" className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg mt-2">Sign Up</button>
             <div className="relative flex items-center justify-center"><div className="w-full h-px bg-white/10"></div><span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Or</span></div>
             <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />Sign up with google</button>
             <p className="text-center text-sm text-gray-400 pt-2">Already have an account? <Link to="/login"><span className="text-white font-bold cursor-pointer hover:underline">Log In</span></Link></p>
@@ -233,6 +304,24 @@ function SignupPage() {
 // PAGE 4 : CONNEXION
 // ============================================================================
 function LoginPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const res = await authAPI.login({ email, password });
+      localStorage.setItem('token', res.data.access_token);
+      alert('Logged in successfully!');
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Login failed');
+    }
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-cover bg-center flex items-center justify-center p-4" style={{ backgroundImage: `url(${homeImage})` }}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
@@ -240,17 +329,18 @@ function LoginPage() {
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 shadow-2xl scale-80 origin-center">
           <h2 className="text-5xl font-serif text-white mb-2">Welcome !</h2>
           <p className="text-gray-300 text-base mb-10 font-light">Sign In to access our intelligent campus, and reserve your desk !</p>
-          <form className="space-y-8">
+          {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
+          <form className="space-y-8" onSubmit={handleLogin}>
             <div className="flex flex-col gap-3">
               <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Email</label>
-              <input type="email" placeholder="Enter your email" className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Enter your email" className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
             <div className="flex flex-col gap-3">
               <label className="text-sm uppercase tracking-[0.2em] text-gray-300 font-medium ml-1">Password</label>
-              <input type="password" placeholder="********" className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="********" className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition" />
             </div>
             <div className="flex justify-between items-center px-1 text-sm"><label className="flex items-center gap-2 text-gray-400 cursor-pointer"><input type="checkbox" className="rounded border-white/10 bg-white/5" />Always remember me</label><a href="#" className="text-gray-400 hover:text-white transition">Forgot password ?</a></div>
-            <button className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg">Log In</button>
+            <button type="submit" className="w-full bg-black text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-all active:scale-95 text-lg">Log In</button>
             <div className="relative flex items-center justify-center"><div className="w-full h-px bg-white/10"></div><span className="absolute bg-transparent px-4 text-gray-500 text-base italic">Or</span></div>
             <button className="w-full bg-white/20 backdrop-blur-md text-white font-medium py-4 rounded-2xl border border-white/10 hover:bg-white/30 transition flex items-center justify-center gap-3 text-base"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />Sign in with google</button>
             <p className="text-center text-sm text-gray-400 pt-4">Don't have an account? <Link to="/signup"><span className="text-white font-bold cursor-pointer hover:underline">Sign Up</span></Link></p>
@@ -271,16 +361,28 @@ function LoginPage() {
 // ============================================================================
 function ReportPage() {
   const [category, setCategory] = useState(null);
+  const [roomId, setRoomId] = useState('');
+  const [description, setDescription] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleReport = (e) => {
+  const handleReport = async (e) => {
     e.preventDefault();
     if (!category) {
       alert("Please select a category first !");
       return;
     }
-    // Simulation d'un envoi réussi
-    setIsSubmitted(true);
+    setError(null);
+    try {
+      await incidentsAPI.create({
+        room_id: parseInt(roomId) || 1, // backend expects an int for room_id
+        description: `[${category.toUpperCase()}] ${description}`,
+        severity: "medium"
+      });
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to submit report');
+    }
   };
 
   return (
@@ -364,14 +466,19 @@ function ReportPage() {
                   </button>
                 </div>
 
+                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
                 <input
                   type="text"
-                  placeholder="Exact Location (e.g., Room A-204)"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  placeholder="Room ID (e.g., 1)"
                   required
                   className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition"
                 />
                 <textarea
                   rows="3"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the issue briefly..."
                   required
                   className="bg-white/10 border border-white/5 rounded-2xl p-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 transition resize-none"
@@ -393,6 +500,7 @@ function ReportPage() {
 // PAGE 6 : ACCUEIL PRINCIPALE
 // ============================================================================
 function LandingPage() {
+  const { user, logout } = useAuth();
   return (
     <>
       <section className="relative min-h-screen flex flex-col bg-cover bg-center" style={{ backgroundImage: `url(${homeImage})` }}>
@@ -404,8 +512,21 @@ function LandingPage() {
           <div className="flex items-center gap-12 text-sm font-medium tracking-wide">
             <a href="#" className="hover:text-gray-300 transition">Home</a>
             <a href="#" className="hover:text-gray-300 transition">About Us</a>
-            <Link to="/signup" className="hover:text-gray-300 transition">Sign Up</Link>
-            <Link to="/login"><button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">Sign In</button></Link>
+            {user ? (
+              <div className="flex items-center gap-6">
+                <span className="text-white font-medium bg-white/10 px-4 py-2 rounded-full border border-white/10 shadow-sm backdrop-blur-md">
+                  {user.first_name} {user.last_name}
+                </span>
+                <button onClick={logout} className="text-sm font-semibold text-gray-300 hover:text-red-400 transition bg-black/20 px-4 py-2 rounded-full border border-transparent hover:border-red-500/50">
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link to="/signup" className="hover:text-gray-300 transition">Sign Up</Link>
+                <Link to="/login"><button className="bg-white text-black px-7 py-2.5 rounded-full font-semibold hover:bg-gray-200 transition">Sign In</button></Link>
+              </>
+            )}
           </div>
         </nav>
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center px-6">
