@@ -246,6 +246,7 @@ function ReservationPage() {
 // ============================================================================
 function RoomInfoPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const selectedHeure = location.state?.time || "your selected time";
   const room = location.state?.room || { id: 1, name: "Salle d'étude A-204", capacity: 6 };
 
