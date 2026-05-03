@@ -49,7 +49,6 @@ function useAuth() {
 // ============================================================================
 function UserMenu({ user, logout }) {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
 
   return (
     <div className="relative">
@@ -108,7 +107,7 @@ function UserMenu({ user, logout }) {
 // ============================================================================
 // COMPOSANT : NAVBAR COMMUNE
 // ============================================================================
-function Navbar({ user, logout, light = false }) {
+function Navbar({ user, logout }) {
   return (
     <nav className="relative z-50 flex justify-between items-center py-8 px-12 w-full text-white">
       <div className="w-12 h-12">
@@ -247,7 +246,6 @@ function ReservationPage() {
 // ============================================================================
 function RoomInfoPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const selectedHeure = location.state?.time || "your selected time";
   const room = location.state?.room || { id: 1, name: "Salle d'étude A-204", capacity: 6 };
 
@@ -267,7 +265,7 @@ function RoomInfoPage() {
               const dataRes = await sensorsAPI.getLatestData(sensor.id);
               const latestData = dataRes.data.length > 0 ? dataRes.data[0].value : null;
               return { ...sensor, latestValue: latestData };
-            } catch (err) {
+            } catch {
               return { ...sensor, latestValue: null };
             }
           })
@@ -701,7 +699,6 @@ function ReportPage() {
 // ============================================================================
 function LandingPage() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [date, setDate] = useState('');
   const [time, setHeure] = useState('');
   const [roomType, setRoomType] = useState('study');
@@ -914,7 +911,7 @@ function MyBookingsPage() {
       await bookingsAPI.cancel(id);
       setBookings(bookings.filter(b => b.id !== id));
       alert("Réservation annulée.");
-    } catch (err) {
+    } catch {
       alert("Erreur lors de l'annulation.");
     }
   };
