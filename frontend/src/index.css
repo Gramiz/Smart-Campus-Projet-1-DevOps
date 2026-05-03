@@ -8,5 +8,4 @@ body,
   margin: 0;
   padding: 0;
   display: block;
-  /* Écrase le 'display: flex' par défaut de Vite */
 }
