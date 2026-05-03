@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ${REGISTRY}/${IMAGE_OWNER}/smart-campus-backend:latest
+    image: ${REGISTRY}/${IMAGE_OWNER}/smart-campus-backend:${IMAGE_TAG:-latest}
     container_name: smart_campus_backend
     ports:
       - "8080:8000"
@@ -33,12 +33,10 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ${REGISTRY}/${IMAGE_OWNER}/smart-campus-frontend:latest
+    image: ${REGISTRY}/${IMAGE_OWNER}/smart-campus-frontend:${IMAGE_TAG:-latest}
     container_name: smart_campus_frontend
     ports:
-      - "5173:5173"
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+      - "5173:80"
     depends_on:
       - backend
     restart: unless-stopped
