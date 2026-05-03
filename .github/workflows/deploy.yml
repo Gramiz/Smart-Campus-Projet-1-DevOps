@@ -83,7 +83,15 @@ jobs:
             IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "${{ secrets.TOKENCICD }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER docker compose -f docker-compose.prod.yml pull
+            for attempt in 1 2 3; do
+              REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER docker compose -f docker-compose.prod.yml pull && break
+              if [ "$attempt" = "3" ]; then
+                echo "docker compose pull failed after 3 attempts"
+                exit 1
+              fi
+              echo "docker compose pull failed, retrying in 15 seconds..."
+              sleep 15
+            done
             REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER VITE_API_BASE_URL=http://${{ secrets.HOST }}:8080 CORS_ORIGINS=http://${{ secrets.HOST }}:5173 docker compose -f docker-compose.prod.yml up -d
 
             curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:5173
