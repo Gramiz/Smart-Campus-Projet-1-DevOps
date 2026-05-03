@@ -93,4 +93,27 @@ jobs:
         run: docker build -t smart-campus-frontend:ci ./frontend
 
       - name: Validate Docker Compose config
-        run: docker compose config
+        run: |
+          MARIADB_ROOT_PASSWORD=root_password \
+          MARIADB_DATABASE=campus_smart_manager \
+          MARIADB_USER=campus_user \
+          MARIADB_PASSWORD=campus_password \
+          DATABASE_URL=mysql+pymysql://campus_user:campus_password@db:3306/campus_smart_manager \
+          SECRET_KEY=ci-secret \
+          ACCESS_TOKEN_EXPIRE_MINUTES=60 \
+          CORS_ORIGINS=http://localhost:5173 \
+          VITE_API_BASE_URL=http://localhost:8080 \
+          GF_SECURITY_ADMIN_PASSWORD=admin \
+          GF_USERS_ALLOW_SIGN_UP=false \
+          docker compose config
+
+      - name: Validate Docker Compose production config
+        run: |
+          REGISTRY=ghcr.io \
+          IMAGE_OWNER=ci \
+          VITE_API_BASE_URL=http://localhost:8080 \
+          CORS_ORIGINS=http://localhost:5173 \
+          docker compose -f docker-compose.prod.yml config
+
+      - name: Validate Prometheus config
+        run: docker run --rm --entrypoint promtool -v "$PWD/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro" prom/prometheus:latest check config /etc/prometheus/prometheus.yml
