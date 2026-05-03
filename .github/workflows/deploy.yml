@@ -131,12 +131,14 @@ jobs:
             done
             REGISTRY=${{ env.REGISTRY }} IMAGE_OWNER=$IMAGE_OWNER IMAGE_TAG=$IMAGE_TAG VITE_API_BASE_URL=http://${{ secrets.HOST }}:8080 CORS_ORIGINS=http://${{ secrets.HOST }}:5173 docker compose -f docker-compose.prod.yml up -d
 
-            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:5173
-            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8080/
-            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:3000/api/health
-            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:9090/-/healthy
-            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8081/
-            curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8082/
-            curl --retry 20 --retry-delay 3 --retry-connrefused http://localhost:3100/ready || true
+            sleep 10
+
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:5173
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:8080/
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:3000/api/health
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:9090/-/healthy
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:8081/
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors --fail http://127.0.0.1:8082/
+            curl --retry 20 --retry-delay 3 --retry-connrefused --retry-all-errors http://127.0.0.1:3100/ready || true
 
             docker image prune -af
