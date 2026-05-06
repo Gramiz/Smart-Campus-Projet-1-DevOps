@@ -814,7 +814,6 @@ function SignupPage() {
 // PAGE 4 : CONNEXION
 // ============================================================================
 function LoginPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -825,8 +824,8 @@ function LoginPage() {
     try {
       const res = await authAPI.login({ email, password });
       localStorage.setItem("token", res.data.access_token);
-      alert("Connexion réussie !");
-      navigate("/");
+      // Utilisation de href pour forcer un rechargement complet et vider les caches d'état
+      window.location.href = "/";
     } catch (err) {
       setError(err.response?.data?.detail || "Échec de la connexion");
     }
@@ -1111,7 +1110,7 @@ function ReportPage() {
                           value={room.id}
                           className="bg-black text-white"
                         >
-                          {room.name} ({room.room_type})
+                          {room.room_number} ({room.room_type})
                         </option>
                       ))}
                     </select>
@@ -1167,7 +1166,7 @@ function LandingPage() {
       // Construction des bornes ISO à partir des champs date (YYYY-MM-DD) et time (HH:MM)
       const startDateHeure = new Date(`${date}T${time}`);
       // Durée fixe d'une heure (3 600 000 ms)
-      const endDateHeure = new Date(startDateHeure.getHeure() + 60 * 60 * 1000);
+      const endDateHeure = new Date(startDateHeure.getTime() + 60 * 60 * 1000);
 
       const res = await roomsAPI.getAvailable(
         startDateHeure.toISOString(),
@@ -1379,7 +1378,7 @@ function LandingPage() {
                     >
                       <div className="bg-black/60 hover:bg-white/20 border border-white/20 rounded-2xl p-6 transition-all cursor-pointer text-left shadow-lg">
                         <h4 className="text-xl font-bold text-white mb-2">
-                          {room.name}
+                          {room.room_number}
                         </h4>
                         <div className="flex justify-between items-center text-sm text-gray-300">
                           <span className="capitalize">{room.room_type}</span>
@@ -1489,22 +1488,33 @@ function LandingPage() {
 function MyBookingsPage() {
   const { user, logout } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await bookingsAPI.getMyBookings();
-        setBookings(res.data);
+        const [bookingsRes, roomsRes] = await Promise.all([
+          bookingsAPI.getMyBookings(),
+          roomsAPI.getAll(),
+        ]);
+        setBookings(bookingsRes.data);
+        setRooms(roomsRes.data);
       } catch (err) {
-        console.error("Erreur lors de la récupération des réservations :", err);
+        console.error("Erreur lors de la récupération des données :", err);
       } finally {
         setLoading(false);
       }
     };
-    if (user) fetchBookings();
+    if (user) fetchData();
   }, [user]);
+
+  const getRoomName = (id) => {
+    if (!rooms || rooms.length === 0) return `Salle #${id}`;
+    const room = rooms.find((r) => r.id === id);
+    return room ? room.room_number : `Salle #${id}`;
+  };
 
   const handleCancel = async (id) => {
     if (!window.confirm("Êtes-vous sûr de vouloir annuler cette réservation ?"))
@@ -1559,7 +1569,7 @@ function MyBookingsPage() {
                   </div>
                 </div>
                 <h4 className="text-2xl font-bold text-white mb-4">
-                  Salle #{booking.room_id}
+                  {getRoomName(booking.room_id)}
                 </h4>
                 <div className="space-y-4 mb-8">
                   <div className="flex items-center gap-3 text-gray-300">
@@ -1612,27 +1622,33 @@ function MyBookingsPage() {
 function MyIncidentsPage() {
   const { user, logout } = useAuth();
   const [incidents, setIncidents] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchIncidents = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // L'API ne supporte pas de filtre par utilisateur sur les incidents.
-        // On récupère tous les incidents et on filtre côté client par reported_by.
-        const res = await incidentsAPI.getAll();
-        const myIncidents = res.data.filter(
-          (inc) => inc.reported_by === user?.id,
-        );
-        setIncidents(myIncidents);
+        const [incRes, roomsRes] = await Promise.all([
+          incidentsAPI.getMyIncidents(),
+          roomsAPI.getAll(),
+        ]);
+        setIncidents(incRes.data);
+        setRooms(roomsRes.data);
       } catch (err) {
-        console.error("Erreur lors de la récupération des signalements :", err);
+        console.error("Erreur lors de la récupération des données :", err);
       } finally {
         setLoading(false);
       }
     };
-    if (user) fetchIncidents();
+    if (user) fetchData();
   }, [user]);
+
+  const getRoomName = (id) => {
+    if (!rooms || rooms.length === 0) return `Salle #${id}`;
+    const room = rooms.find((r) => r.id === id);
+    return room ? room.room_number : `Salle #${id}`;
+  };
 
   return (
     <div
@@ -1681,7 +1697,7 @@ function MyIncidentsPage() {
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-3 mb-3">
                     <span className="text-[10px] uppercase tracking-widest font-bold bg-white/10 px-3 py-1 rounded-full text-gray-300">
-                      Salle #{incident.room_id}
+                      {getRoomName(incident.room_id)}
                     </span>
                     <span
                       className={`text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full ${incident.status === "resolved" ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"}`}
