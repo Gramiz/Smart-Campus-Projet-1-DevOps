@@ -814,7 +814,6 @@ function SignupPage() {
 // PAGE 4 : CONNEXION
 // ============================================================================
 function LoginPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
